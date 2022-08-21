@@ -1,12 +1,14 @@
 import React,{useState,useEffect, forwardRef, useImperativeHandle} from "react";
 
 const ComputerGameBoard =forwardRef((props,ref)=>{
-
-    const {setTurns,start,setWinner,winner,reset,shipsArray,alphabet}=props
+    
+    // Passing props from parent component
+    const {setTurns,start,winner,reset,shipsArray,alphabet,initialGameBoard,checkAllShipSunk}=props
 
     const [computerGrids,setComputerGrids]=useState([]);
     const [remainShip,setRemainShip]=useState(['battleship', 'carrier', 'destroyer', 'patrolBoat', 'submarine']);
 
+    // Re-render screen
     useEffect(()=>{
         if(reset===true){
             setComputerGrids([])
@@ -16,61 +18,58 @@ const ComputerGameBoard =forwardRef((props,ref)=>{
         }
     },[reset]);
 
+    // Call the function by Parent component
     useImperativeHandle(ref, () => ({
         computer_place_ships
     }));
 
-    const initialGameBoard=(setGrids)=>{
-        for (let y=0;y<10;y++){
-            for (let x=0;x<10;x++){
-                setGrids(grids=>[...grids,{id:`${alphabet[y]}${[x]}`,ship_exist:null,shot:false}])
-            }
-        }
-    };
-
+    // Random place ships function
     const computer_place_ships=()=>{
         const newArr=[...computerGrids]
-        console.log(computerGrids)
         let placedShipNumber=0
         for(;placedShipNumber<shipsArray.length;){
             const length=shipsArray[placedShipNumber].length
             const name=shipsArray[placedShipNumber].name
+            // generate random integer between 0(not horizontal) and 1 (horizontal)
             const random_horizontal=Math.abs(Math.floor(Math.random()*2))
-            const occupied_row=[]
+            const occupied_id=[]
             if (random_horizontal){
+                // random integer between 0 and 9-ship length
                 const random_row_index=Math.abs(Math.floor(Math.random()*9-length))
                 const random_column_index=Math.abs(Math.floor(Math.random()*9))
+                // push all grid id which will be occupied into array
                 for(let i=random_row_index;i<random_row_index+length;i++){
-                    occupied_row.push(`${alphabet[random_column_index]}${i}`)
+                    occupied_id.push(`${alphabet[random_column_index]}${i}`)
                 }
-                if(newArr.filter(item=>
-                    occupied_row.includes(item.id)
-                    ).every(item=>item.ship_exist===null)){
-                    newArr.filter(item=>
-                        occupied_row.includes(item.id)
-                    ).map(item=>item.ship_exist=name)
+                // filter occupied object by id and check every id is/is not occupied by ship
+                const occupied_object = newArr.filter(item=>occupied_id.includes(item.id))
+                if(occupied_object.every(item=>item.ship_exist===null)){
+                    occupied_object.map(item=>item.ship_exist=name)
                     placedShipNumber++
                 }
             }else{
                 const random_row_index=Math.abs(Math.floor(Math.random()*9))
+                // random integer between 0 and 9-ship length
                 const random_column_index=Math.abs(Math.floor(Math.random()*9-length))
+                // push all grid id which will be occupied into array
                 for(let i=random_column_index;i<random_column_index+length;i++){
-                    occupied_row.push(`${alphabet[i]}${random_row_index}`)
+                    occupied_id.push(`${alphabet[i]}${random_row_index}`)
                 }
-                if(newArr.filter(item=>
-                    occupied_row.includes(item.id)
-                    ).every(item=>item.ship_exist===null)){
-                    newArr.filter(item=>
-                        occupied_row.includes(item.id)
-                    ).map(item=>item.ship_exist=name)
+                // filter occupied object by id and check every id is/is not occupied by ship
+                const occupied_object = newArr.filter(item=>occupied_id.includes(item.id))
+                if(occupied_object.every(item=>item.ship_exist===null)){
+                    occupied_object.map(item=>item.ship_exist=name)
                     placedShipNumber++
                 }
             }
         }
+        // return original array if position not fulfill the requirement
         setComputerGrids(newArr)
-    }
+    };
 
-    const receiveAttack=(location)=>{
+    // Receive Attack from Player
+    const receiveAttack=(event)=>{
+        const location=(event.target.id)
         let newArr=[...computerGrids]
         newArr.map(item=>{
             if(item.id===location){
@@ -78,25 +77,9 @@ const ComputerGameBoard =forwardRef((props,ref)=>{
             }
             return item
         })
-        checkAllShipSunk()
+        checkAllShipSunk(computerGrids,setRemainShip,"Player")
         setComputerGrids(newArr)
         setTurns(turn=>turn+1)
-    }
-
-    const attack=(event)=>{
-        const location=(event.target.id)
-        if(event.target.class!==false){
-            receiveAttack(location)
-        }
-    }
-
-    const checkAllShipSunk=()=>{
-        const ship_list=computerGrids.filter(element=>element.ship_exist!==null && element.shot===false)
-        setRemainShip(Array.from(new Set(ship_list.map(element=>element.ship_exist))).sort()) 
-        console.log(remainShip)
-        if (ship_list.length===0){
-            setWinner("Player Win!")
-        }
     }
 
     return(
@@ -112,13 +95,13 @@ const ComputerGameBoard =forwardRef((props,ref)=>{
                     {computerGrids.map(grid=>{
                         return(
                             <button 
-                            className={`${grid.shot} `} 
-                            //${grid.ship_exist}
+                            className={`${grid.shot} ${grid.ship_exist}`} 
+                            //
                             style={{backgroundColor:grid.shot&&grid.ship_exist?"rgb(255, 130, 130)":"none"}}
                             id={`${grid.id}`} 
                             onClick={(event)=>{
                                 if(!grid.shot && start===true && winner===null){
-                                    attack(event)
+                                    receiveAttack(event)
                                 }
                             }}
                             >{grid.shot&&grid.ship_exist?"X":null}</button>
